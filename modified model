@@ -1,0 +1,51 @@
+# Load necessary libraries
+library(NHANES)
+library(dplyr)
+library(ggplot2)
+# Load the car package for vif() function
+library(car)
+
+# Calculate VIF for the interaction model
+vif(interaction_model)
+# Load the NHANES dataset
+data("NHANES")
+help("NHANES")
+NHANES$Depressed
+# Filter data for participants aged 20 or older
+NHANES_filtered <- NHANES %>%
+  filter(!is.na(Testosterone), !is.na(Smoke100), !is.na(Marijuana), !is.na(Age), Age >= 20)
+
+# Convert Smoke100 and Marijuana to factor variables
+NHANES_filtered$Smoke100 <- factor(NHANES_filtered$Smoke100, levels = c("No", "Yes"))
+NHANES_filtered$Marijuana <- factor(NHANES_filtered$Marijuana, levels = c("No", "Yes"))
+
+# Center Age by subtracting the mean age
+NHANES_filtered$Age_centered <- NHANES_filtered$Age - mean(NHANES_filtered$Age, na.rm = TRUE)
+
+# Fit the regression model with interaction terms, using centered Age
+interaction_model <- lm(Testosterone ~ Age_centered + Smoke100 + Marijuana + Age_centered * Smoke100 + Age_centered * Marijuana, data = NHANES_filtered)
+# Calculate VIF for the interaction model
+vif(interaction_model)
+# Summary of the regression model
+summary(interaction_model)
+
+# Create new data for predictions, varying Age, Smoke100, and Marijuana
+new_data <- expand.grid(
+  Age = seq(min(NHANES_filtered$Age), max(NHANES_filtered$Age), by = 1),
+  Smoke100 = c("No", "Yes"),
+  Marijuana = c("No", "Yes")
+)
+
+# Predict Testosterone values based on the fitted model
+new_data$Predicted_Testosterone <- predict(interaction_model, newdata = new_data)
+
+# Plot the interaction effect of Age, Smoking, and Marijuana on Testosterone
+ggplot(new_data, aes(x = Age, y = Predicted_Testosterone, color = interaction(Smoke100, Marijuana))) +
+  geom_line(size = 1) +
+  labs(
+    title = "Interaction Effect of Age, Smoking, and Marijuana on Testosterone",
+    x = "Age",
+    y = "Predicted Testosterone",
+    color = "Smoking & Marijuana Status"
+  ) +
+  theme_minimal()
