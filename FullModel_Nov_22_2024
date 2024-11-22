@@ -1,0 +1,80 @@
+# install.packages("NHANES")
+library("NHANES")
+# install.packages("car")
+library(car)
+
+str(NHANES)
+colSums(is.na(NHANES))
+
+# Make SleepHrsNight categorical with 3 levels
+NHANES$SleepHrsNight_cat <- cut(
+  NHANES$SleepHrsNight,
+  breaks = c(-Inf, 6, 8, Inf),
+  labels = c("<6 hours", "6-8 hours", "8+ hours"),
+  right = FALSE
+)
+
+# Make Depressed categorical with 4 levels
+NHANES$Depressed_cat <- factor(
+  NHANES$Depressed,
+  levels = c("None", "Several", "Majority", "AlmostAll"),
+  labels = c("1", "2", "3", "4")  # Ensure levels correspond to numeric representation
+)
+
+# Set the reference group for Depressed as "None"
+NHANES$Depressed_cat <- relevel(NHANES$Depressed, ref = "None")
+
+# All covariates 
+vars <- c("TotChol", "Age", "Gender", "Race1", "BMI", "SleepTrouble", 
+          "Depressed_cat", "Smoke100", "PhysActiveDays", "Diabetes", "AlcoholYear",
+          "RegularMarij", "HardDrugs")
+
+# Remove missing values
+NHANES_clean <- NHANES[complete.cases(NHANES[vars]), ]
+
+# Creating Reference Groups
+NHANES_clean$Race1 <- relevel(NHANES_clean$Race1, ref = "White")
+NHANES_clean$Gender <- relevel(NHANES_clean$Gender, ref = "male")
+NHANES_clean$SleepHrsNight_cat <- relevel(NHANES_clean$SleepHrsNight_cat, ref = "6-8 hours")
+NHANES_clean$Smoke100 <- relevel(NHANES_clean$Smoke100, ref = "No")
+NHANES_clean$PhysActive <- relevel(NHANES_clean$PhysActive, ref = "No")
+NHANES_clean$Diabetes <- relevel(NHANES_clean$Diabetes, ref = "No")
+NHANES_clean$SleepTrouble <- relevel(NHANES_clean$SleepTrouble, ref = "No")
+NHANES_clean$RegularMarij <- relevel(NHANES_clean$RegularMarij, ref = "No")
+NHANES_clean$HardDrugs <- relevel(NHANES_clean$HardDrugs, ref = "No")
+
+# Center Age & BMI
+NHANES_clean$Age_centered <- scale(NHANES_clean$Age, center = TRUE, scale = FALSE)
+NHANES_clean$BMI_centered <- scale(NHANES_clean$BMI, center = TRUE, scale = FALSE)
+
+# Fit MLR model:
+predicted_chol <- lm(
+  TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
+    Depressed_cat + Smoke100 +SleepTrouble
+  + PhysActiveDays + Diabetes + AlcoholYear + RegularMarij + HardDrugs,
+  data = NHANES_clean
+)
+
+
+summary(predicted_chol)
+
+# Checking VIF
+vif_values <- vif(predicted_chol)
+print(vif_values)
+
+
+# Fit full Interaction model:
+interaction_chol <- lm(
+  TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
+    Depressed_cat + Smoke100 + SleepTrouble +
+    PhysActiveDays + Diabetes + AlcoholYear + RegularMarij + 
+    HardDrugs + RegularMarij*Race1 + SleepTrouble*PhysActiveDays +
+    SleepTrouble*BMI_centered + SleepTrouble*Diabetes,
+  data = NHANES_clean
+)
+
+
+summary(interaction_chol)
+
+vif_interaction <- vif(interaction_chol, type = 'predictor')
+print(vif_interaction)
