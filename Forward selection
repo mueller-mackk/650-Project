@@ -88,6 +88,11 @@ forward_selection <- ols_step_forward_p(
   penter = 0.1,    
   details = F
 )
+print(forward_selection)
+
+# Get the selected variable
+selected_variables <- names(coef(forward_selection$model))
+print(selected_variables)
 
 summary(forward_selection$model)
 
