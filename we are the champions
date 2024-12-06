@@ -1,0 +1,251 @@
+####################################Step 1:Encoding and full model################################
+# Step 1: Data Cleaning
+
+# Remove missing values for selected variables
+vars <- c("TotChol", "Age", "Gender", "Race1", "BMI", "SleepTrouble", 
+          "Depressed", "Smoke100", "PhysActiveDays", "Diabetes", 
+          "Alcohol12PlusYr", "RegularMarij", "HardDrugs", "Poverty")
+help(NHANES)
+NHANES_clean <- NHANES[complete.cases(NHANES[vars]), ]
+n_rows <- nrow(NHANES_clean)
+print(n_rows)
+# Subset the data to include only participants aged 20 to 59
+NHANES_clean_subset <- NHANES_clean[NHANES_clean$Age >= 20 & NHANES_clean$Age <= 59, ]
+# Show the number of rows in NHANES_clean_subset
+n_rows <- nrow(NHANES_clean_subset)
+print(n_rows)
+# Step 2: Encoding Categorical Variables After Data Cleaning
+
+# Make 'Depressed' categorical with 4 levels
+NHANES_clean_subset$Depressed_cat <- factor(
+  NHANES_clean_subset$Depressed,
+  levels = c("None", "Several", "Majority", "AlmostAll")
+)
+
+# Ensure that "None" is a level for 'Depressed_cat'
+if (!("None" %in% levels(NHANES_clean_subset$Depressed_cat))) {
+  levels(NHANES_clean_subset$Depressed_cat) <- c(levels(NHANES_clean_subset$Depressed_cat), "None")
+}
+
+# Set the reference group for 'Depressed_cat' to "None"
+NHANES_clean_subset$Depressed_cat <- relevel(NHANES_clean_subset$Depressed_cat, ref = "None")
+
+# Create the binary variable 'HabitualPhysic'
+NHANES_clean_subset$HabitualPhysic <- ifelse(NHANES_clean_subset$PhysActiveDays >= 4, 1, 0)
+# Convert 'HabitualPhysic' to a factor
+NHANES_clean_subset$HabitualPhysic <- factor(NHANES_clean_subset$HabitualPhysic, levels = c(0, 1), labels = c("Less Active", "Habitual Active"))
+# Set reference group for 'HabitualPhysic'
+NHANES_clean_subset$HabitualPhysic <- relevel(NHANES_clean_subset$HabitualPhysic, ref = "Less Active")
+
+# Creating Reference Groups for Other Categorical Variables
+NHANES_clean_subset$Race1 <- relevel(factor(NHANES_clean_subset$Race1), ref = "White")
+NHANES_clean_subset$Gender <- relevel(factor(NHANES_clean_subset$Gender), ref = "male")
+NHANES_clean_subset$Smoke100 <- relevel(factor(NHANES_clean_subset$Smoke100), ref = "No")
+NHANES_clean_subset$Diabetes <- relevel(factor(NHANES_clean_subset$Diabetes), ref = "No")
+NHANES_clean_subset$SleepTrouble <- relevel(factor(NHANES_clean_subset$SleepTrouble), ref = "No")
+NHANES_clean_subset$RegularMarij <- relevel(factor(NHANES_clean_subset$RegularMarij), ref = "No")
+NHANES_clean_subset$HardDrugs <- relevel(factor(NHANES_clean_subset$HardDrugs), ref = "No")
+NHANES_clean_subset$Alcohol12PlusYr <- relevel(factor(NHANES_clean_subset$Alcohol12PlusYr), ref = "No")
+
+# Step 3: Center Age, BMI, and Poverty
+NHANES_clean_subset$Age_centered <- scale(NHANES_clean_subset$Age, center = TRUE, scale = FALSE)
+NHANES_clean_subset$BMI_centered <- scale(NHANES_clean_subset$BMI, center = TRUE, scale = FALSE)
+NHANES_clean_subset$Poverty_centered <- scale(NHANES_clean_subset$Poverty, center = TRUE, scale = FALSE)
+
+# Step 4: Fit the Multiple Linear Regression Model
+
+# Fit the MLR model including 'HabitualPhysic'
+predicted_chol <- lm(
+  TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
+    Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + 
+    Diabetes + Alcohol12PlusYr + RegularMarij + HardDrugs + Poverty_centered,
+  data = NHANES_clean_subset
+)
+
+# Summary of the updated model
+summary(predicted_chol)
+
+# Checking VIF for multicollinearity issues
+vif_values <- vif(predicted_chol)
+print(vif_values)
+####################################Step 1:Encoding and full model################################
+
+
+
+
+# Correlation Matrix for All Variables Including TotChol Using corrplot
+# Load necessary libraries
+library(dplyr)
+library(corrplot)
+
+# Variables to include in the correlation matrix
+vars <- c("TotChol", "Age_centered", "BMI_centered", "Gender", "Race1", 
+          "Depressed_cat", "Smoke100", "SleepTrouble", "HabitualPhysic", 
+          "Diabetes", "Alcohol12PlusYr", "RegularMarij", "HardDrugs", "Poverty")
+
+# Select relevant variables and convert categorical to numeric
+selected_data <- NHANES_clean_subset %>%
+  select(all_of(vars)) %>%
+  mutate(across(where(is.factor), ~ as.numeric(as.factor(.))))
+
+# Compute the correlation matrix for all selected variables
+correlation_matrix <- cor(selected_data, use = "pairwise.complete.obs")
+
+# Generate a correlation plot
+corrplot(correlation_matrix, method = "color", type = "upper", 
+         tl.col = "black", tl.srt = 45, addCoef.col = "black",
+         title = "Correlation Matrix Including TotChol", mar = c(0, 0, 2, 0))
+
+
+
+####################################Step 2:model selection################################
+#####goal: to select the main effect from potnetial predictors
+
+### forward selection
+olsrr::ols_step_forward_p(lm(TotChol~Age_centered + BMI_centered + Gender + Race1 + 
+                               Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + 
+                               Diabetes + Alcohol12PlusYr + RegularMarij + HardDrugs + Poverty_centered,data=NHANES_clean_subset),penter=0.1,details=F)
+
+
+ olsrr::ols_step_backward_p(
+  lm(TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
+       Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + 
+       Diabetes + Alcohol12PlusYr + RegularMarij + HardDrugs + Poverty_centered, 
+     data = NHANES_clean_subset),
+  prem = 0.1,  # Threshold for removal
+  details = FALSE  # Suppress detailed output for a concise summary
+)
+
+
+####################################Step 2:model selection################################
+
+
+
+
+
+####################################Step 3:model assumptions for the final model################################
+# Fit the linear regression model using the selected variables from backward selection (BIC)
+#####goal: to check model assumptions for our final linear model
+# Final main effect model
+Main_effect_model <- lm(TotChol~Age_centered + BMI_centered + Gender + Race1 + 
+                          Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + 
+                          Diabetes + Alcohol12PlusYr + RegularMarij + HardDrugs + Poverty_centered,data=NHANES_clean_subset
+)
+# Summary of the model to get the coefficients, significance, etc.
+summary(Main_effect_model)
+# check if we have multicolinearity
+vif(Main_effect_model)
+### partial regression plot for linearity
+# Create partial regression plots for continuous variables (Age_centered, BMI_centered, AlcoholYear, Poverty)
+# linearity is valid
+library(car)
+avPlots(Main_effect_model, terms = ~ Age_centered + BMI_centered + Poverty_centered )
+# linearity is valid base on plot
+###  residuals vs. fitted values plot for constant variance
+plot(Main_effect_model, which = 1, main = "Residuals vs Fitted Values")
+# constant variance assumption holds
+###  note this is cross_sectional study, so we can assume indepence holds for this
+### Dubrin-watson test for independence
+#install.packages("lmtest")
+library(lmtest)
+# perform dw test 
+dw_test_result <- dwtest(Main_effect_model)
+print(dw_test_result)
+### Q-Q plot for checking normality note: By central limit theorem , the inference is valid regardless of normality
+qqnorm(residuals(Main_effect_model))
+qqline(residuals(Main_effect_model))
+# Shapiro-Wilk test for normality
+shapiro_test_result <- shapiro.test(residuals(Main_effect_model))
+print(shapiro_test_result)
+### we have few outliers , and tails looks suspecious
+####################################Step 3:model assumptions for the final model################################
+
+
+####################################Step 4:effect modification################################
+
+# Fit interaction model with all main effects and specified interactions with SleepTrouble
+interaction_model <- lm(
+  TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
+    Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + Diabetes + 
+    Alcohol12PlusYr + RegularMarij + HardDrugs + Poverty_centered +
+    Smoke100:SleepTrouble + HabitualPhysic:SleepTrouble + Alcohol12PlusYr:SleepTrouble + RegularMarij:SleepTrouble,
+  data = NHANES_clean_subset
+)
+
+
+# Summary of the interaction model
+summary(interaction_model)
+
+
+# Fit the reduced model without interaction terms
+reduced_model <- lm(
+  TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
+    Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + Diabetes + 
+    Alcohol12PlusYr + RegularMarij + HardDrugs + Poverty_centered,
+  data = NHANES_clean_subset
+)
+
+# Fit the full model with interaction terms
+full_model <- lm(
+  TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
+    Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + Diabetes + 
+    Alcohol12PlusYr + RegularMarij + HardDrugs + Poverty_centered +
+    Smoke100:SleepTrouble + HabitualPhysic:SleepTrouble + Alcohol12PlusYr:SleepTrouble + RegularMarij:SleepTrouble,
+  data = NHANES_clean_subset
+)
+
+# Compare the reduced and full models using an ANOVA test
+anova_result <- anova(reduced_model, full_model)
+
+# Print the ANOVA result
+print(anova_result)
+####################################Step 4:effect modification################################
+
+
+
+
+####################################Step 5:Outliers/Influence Diagnostics################################
+#a.Calculate standardized residuals(Data points above ±3, these are usually considered outliers)
+standardized_residuals <- rstandard(Main_effect_model)
+# Identify residuals exceeding ±3
+outliers <- which(abs(standardized_residuals) > 3)
+print("Potential Outliers:")
+print(outliers)
+# Plot standardized residuals
+plot(standardized_residuals, main = "Standardized Residuals", 
+     xlab = "Observation Index", ylab = "Standardized Residuals")
+abline(h = c(-3, 3), col = "red", lty = 2)
+#---------------------------------------------------------------------------------------
+#b.# Calculate Cook's Distance(Used to detect the effect of data points on the overall model fit.)
+cooks_distances <- cooks.distance(Main_effect_model)
+# Determine threshold
+threshold <- 4 / nrow(NHANES_clean_subset)
+# Identify influential points
+influential_points <- which(cooks_distances > threshold)
+print("Influential Points (Cook's Distance):")
+print(influential_points)
+# Plot Cook's Distance
+plot(cooks_distances, main = "Cook's Distance", 
+     xlab = "Observation Index", ylab = "Cook's Distance")
+abline(h = threshold, col = "red", lty = 2)
+#---------------------------------------------------------------------------------------
+#c.# Calculate leverage values(The effect of each data point on the predicted value)
+leverage_values <- hatvalues(Main_effect_model)
+# Determine threshold
+p <- length(coef(Main_effect_model)) - 1  # Number of predictors
+n <- nrow(NHANES_clean_subset)  # Sample size
+leverage_threshold <- 2 * (p + 1) / n
+# Identify high-leverage points
+high_leverage_points <- which(leverage_values > leverage_threshold)
+print("High Leverage Points:")
+print(high_leverage_points)
+# Plot leverage values
+plot(leverage_values, main = "Leverage Values", 
+     xlab = "Observation Index", ylab = "Leverage")
+abline(h = leverage_threshold, col = "blue", lty = 2)
+#---------------------------------------------------------------------------------------
+#d.# Generate an influence plot(Visualization of outliers and high leverage points)
+library(car)
+influencePlot(Main_effect_model, id.method = "identify",
+              main = "Influence Plot", sub = "Circle size is proportional to Cook's Distance")
+####################################Step 5:Outliers/Influence Diagnostics################################
