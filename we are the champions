@@ -1,6 +1,7 @@
 ####################################Step 1:Encoding and full model################################
+library(NHANES)
+library(car)
 # Step 1: Data Cleaning
-
 # Remove missing values for selected variables
 vars <- c("TotChol", "Age", "Gender", "Race1", "BMI", "SleepTrouble", 
           "Depressed", "Smoke100", "PhysActiveDays", "Diabetes", 
@@ -124,7 +125,6 @@ olsrr::ols_step_forward_p(lm(TotChol~Age_centered + BMI_centered + Gender + Race
 
 
 ####################################Step 3:model assumptions for the final model################################
-# Fit the linear regression model using the selected variables from backward selection (BIC)
 #####goal: to check model assumptions for our final linear model
 # Final main effect model
 Main_effect_model <- lm(TotChol~Age_centered + BMI_centered + Gender + Race1 + 
@@ -163,7 +163,7 @@ print(shapiro_test_result)
 
 ####################################Step 4:effect modification################################
 
-# Fit interaction model with all main effects and specified interactions with SleepTrouble
+# Fit interaction model with all long term lifestyle factors  interact with SleepTrouble
 interaction_model <- lm(
   TotChol ~ Age_centered + BMI_centered + Gender + Race1 + 
     Depressed_cat + Smoke100 + SleepTrouble + HabitualPhysic + Diabetes + 
