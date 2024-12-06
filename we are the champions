@@ -249,3 +249,167 @@ library(car)
 influencePlot(Main_effect_model, id.method = "identify",
               main = "Influence Plot", sub = "Circle size is proportional to Cook's Distance")
 ####################################Step 5:Outliers/Influence Diagnostics################################
+
+
+# Extract observation numbers for Cook's Distance, DFFITS, and Leverage
+observations <- unique(c(rownames(top2_cooksd), rownames(top2_dffits), rownames(top2_leverage)))
+
+# Create a summary table for key diagnostics
+summary_influence <- data.frame(
+  Observation = as.numeric(observations),
+  Residual = influence[observations, "Residual"],
+  Leverage = influence[observations, "Leverage"],
+  Cooks_Distance = influence[observations, "Cooks_D"],
+  DFFITS = influence[observations, "DFFITS"]
+)
+
+
+# Extract the first two observations with the largest absolute residuals
+top2_residuals <- influence[order(-abs(influence$Residual)), ][1:2, ]
+
+# Create a summary table for the top 2 residuals
+summary_residuals <- data.frame(
+  Observation = as.numeric(rownames(top2_residuals)),
+  Residual = top2_residuals$Residual,
+  Leverage = top2_residuals$Leverage,
+  Cooks_Distance = top2_residuals$Cooks_D,
+  DFFITS = top2_residuals$DFFITS
+)
+
+# Display the table
+library(knitr)
+library(kableExtra)
+
+kable(
+  summary_residuals,
+  format = "html",
+  caption = "Top 2 Observations with Largest Residuals"
+) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+
+
+
+
+# Extract leverage values
+leverage_values <- hatvalues(Main_effect_model)
+
+# Identify the two observations with the highest leverage
+top2_leverage <- order(-leverage_values)[1:2]
+
+# Create a summary table for the two highest leverage observations
+top2_leverage_table <- data.frame(
+  Observation = top2_leverage,
+  Leverage = leverage_values[top2_leverage]
+)
+
+# Display the table
+library(knitr)
+library(kableExtra)
+
+kable(
+  top2_leverage_table,
+  format = "html",
+  caption = "Top 2 Observations with Highest Leverage"
+) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+
+
+
+# Calculate DFFITS
+dffits_values <- dffits(Main_effect_model)
+
+# Identify the indices of the two observations with the largest absolute DFFITS values
+top2_indices <- order(-abs(dffits_values))[1:2]  # Row indices of top 2 DFFITS
+
+# Retrieve the actual observation IDs
+top2_observations <- rownames(NHANES_clean_subset)[top2_indices]  # Use rownames to get observation names/IDs
+
+# Create a summary table for the two highest DFFITS observations
+top2_dffits_table <- data.frame(
+  DFFITS = dffits_values[top2_indices] # DFFITS values
+)
+
+# Display the table
+
+
+kable(
+  top2_dffits_table,
+  format = "html",
+  caption = "Top 2 Observations with Largest DFFITS"
+) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+
+
+
+
+# Calculate DFBETAs for all predictors
+dfbetas_values <- dfbetas(Main_effect_model)
+
+# Identify the two observations with the largest absolute DFBETA values for each predictor
+top2_dfbetas <- apply(dfbetas_values, 2, function(column) {
+  abs_vals <- abs(column)
+  top_indices <- order(-abs_vals)[1:2]  # Get top 2 indices for each predictor
+  data.frame(
+    Observation = top_indices,
+    DFBETA_Value = column[top_indices]
+  )
+})
+
+# Combine results into a single data frame
+dfbetas_table <- do.call(rbind, lapply(names(top2_dfbetas), function(predictor) {
+  cbind(
+    Predictor = predictor,
+    top2_dfbetas[[predictor]]
+  )
+}))
+
+# Display the table
+
+kable(
+  dfbetas_table,
+  format = "html",
+  caption = "Top 2 Observations with Largest DFBETAs for Each Predictor"
+) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+
+
+
+
+# Calculate Cook's Distance
+cooks_d_values <- cooks.distance(Main_effect_model)
+
+# Identify the two observations with the largest Cook's Distance
+top2_cooksd <- order(-cooks_d_values)[1:2]
+
+# Create a summary table for the two largest Cook's Distance observations
+top2_cooksd_table <- data.frame(
+  Observation = top2_cooksd,
+  Cooks_Distance = cooks_d_values[top2_cooksd]
+)
+
+# get information for obserbation 767 1428 and 1152 
+target_variables <- c(
+  "TotChol", "Age_centered", "BMI_centered", "Gender", "Race1", 
+  "Depressed_cat", "Smoke100", "SleepTrouble", "HabitualPhysic", 
+  "Diabetes", "Alcohol12PlusYr", "RegularMarij", "HardDrugs", "Poverty_centered"
+)
+
+# Extract rows for observations 767, 1428, and 1152, with only target variables
+target_observations <- NHANES_clean_subset[c(767, 1428, 1152), target_variables]
+
+# Add observation numbers as a new column
+target_observations$Observation <- c(767, 1428, 1152)
+
+# Reorder columns to display Observation as the first column
+target_observations <- target_observations[, c("Observation", target_variables)]
+
+# Display the rows in a professional table
+library(knitr)
+library(kableExtra)
+
+kable(
+  target_observations,
+  format = "html",
+  caption = "Rows Corresponding to Observations 767, 1428, and 1152 for Target Variables"
+) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
