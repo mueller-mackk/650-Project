@@ -413,3 +413,40 @@ kable(
   caption = "Rows Corresponding to Observations 767, 1428, and 1152 for Target Variables"
 ) %>%
   kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+
+
+
+
+###########################Descriptive Statistics##################
+# Load necessary packages
+library(dplyr)
+library(knitr)
+
+# List of variables in the full model (not centered versions for descriptive stats)
+variables <- c("Age", "BMI", "Gender", "Race1", "Depressed_cat", "Smoke100", "SleepTrouble", 
+               "PhysActive", "Diabetes", "AlcoholYear", "RegularMarij", "HardDrugs")
+
+participants <- NHANES_clean %>%
+  select(all_of(variables)) %>%
+  filter(complete.cases(.))
+
+table_desc_stats <- participants %>%
+  summarise(
+    n = n(),
+    Age = paste0(mean(Age), " (", sd(Age), ")"),
+    BMI = paste0(mean(BMI), " (", sd(BMI), ")"),
+    Gender_male = paste0(sum(Gender == "Male"), " (", round(100 * sum(Gender == "Male") / n(), 1), "%)"),
+    Race_Black = paste0(sum(Race1 == "Black"), " (", round(100 * sum(Race1 == "Black") / n(), 1), "%)"),
+    Race_Hispanic = paste0(sum(Race1 == "Hispanic"), " (", round(100 * sum(Race1 == "Hispanic") / n(), 1), "%)"),
+    Race_Mexican = paste0(sum(Race1 == "Mexican"), " (", round(100 * sum(Race1 == "Mexican") / n(), 1), "%)"),
+    Race_White = paste0(sum(Race1 == "White"), " (", round(100 * sum(Race1 == "White") / n(), 1), "%)"),
+    Race_Other = paste0(sum(Race1 == "Other"), " (", round(100 * sum(Race1 == "Other") / n(), 1), "%)"),
+    Smoke100_Yes = paste0(sum(Smoke100 == "Yes"), " (", round(100 * sum(Smoke100 == "Yes") / n(), 1), "%)"),
+    SleepTrouble_Yes = paste0(sum(SleepTrouble == "Yes"), " (", round(100 * sum(SleepTrouble == "Yes") / n(), 1), "%)"),
+    Diabetes_Yes = paste0(sum(Diabetes == "Yes"), " (", round(100 * sum(Diabetes == "Yes") / n(), 1), "%)"),
+    Alcohol12PlusYr_Yes = paste0(sum(AlcoholYear == "Yes"), " (", round(100 * sum(AlcoholYear == "Yes") / n(), 1), "%)"),
+    RegularMarij_Yes = paste0(sum(RegularMarij == "Yes"), " (", round(100 * sum(RegularMarij == "Yes") / n(), 1), "%)"),
+    HardDrugs_Yes = paste0(sum(HardDrugs == "Yes"), " (", round(100 * sum(HardDrugs == "Yes") / n(), 1), "%)")
+  )
+
+kable(table_desc_stats, format = "markdown", align = "l")
