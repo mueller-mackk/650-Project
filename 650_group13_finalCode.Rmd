@@ -1,6 +1,6 @@
 ---
 title: "650_group13_finalCode"
-author: "GuoJennifer"
+author: "Shengyu Hung, Jennifer Guo, Mackenzie Mueller, Wenxin Ni, Haosheng Pu"
 date: "2024-12-08"
 output: html_document
 ---
