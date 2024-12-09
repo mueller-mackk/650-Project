@@ -37,7 +37,7 @@ NHANES_clean_subset$Depressed_cat <- factor(
   levels = c("None", "Several", "Majority", "AlmostAll")
 )
 
-# Ensure that "None" is a level for 'Depressed_cat'
+# make sure "None" is a level for 'Depressed_cat'
 if (!("None" %in% levels(NHANES_clean_subset$Depressed_cat))) {
   levels(NHANES_clean_subset$Depressed_cat) <- c(levels(NHANES_clean_subset$Depressed_cat), "None")
 }
@@ -91,7 +91,6 @@ Correlation Matrix
 ```{r}
 
 # Correlation Matrix for All Variables Including TotChol Using corrplot
-# Load necessary libraries
 library(dplyr)
 library(corrplot)
 
@@ -450,7 +449,6 @@ Descriptive Statistics Table
 ```{r, echo=FALSE}
 
 ###########################Descriptive Statistics##################
-# Load necessary packages
 library(dplyr)
 library(knitr)
 library(tidyr)
